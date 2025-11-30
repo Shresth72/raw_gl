@@ -51,14 +51,16 @@ const char *SRC_FILES[] = {"src/main.c"};
 #define builder_include_path(cmd, include_path)                                \
   cmd_append(cmd, temp_sprintf("-I%s", include_path))
 
+/* ----- OPENGL ----- */
+#define builder_opengl(cmd) cmd_append(cmd, "-lglfw", "-lGL", "-lGLEW", "-ldl")
+
 /* ----- RAYLIB ----- */
-#define builder_raylib_include_path(cmd)                                       \
-  cmd_append(cmd, temp_sprintf("-I%s/include/", RAYLIB_PATH))
-#define builder_raylib_library_path(cmd)                                       \
-  cmd_append(cmd, temp_sprintf("-L%s/lib/", RAYLIB_PATH), RAYLIB_LINKER)
+#define builder_raylib(cmd)                                                    \
+  cmd_append(cmd, temp_sprintf("-I%s/include/", RAYLIB_PATH),                  \
+             temp_sprintf("-L%s/lib/", RAYLIB_PATH), RAYLIB_LINKER)
 
 /* ----- FREETYPE2 ----- */
-#define builder_freetype_include_path(cmd)                                     \
+#define builder_freetype2(cmd)                                                 \
   cmd_append(cmd, temp_sprintf("-I%s", FREETYPE_INCLUDE_PATH),                 \
              temp_sprintf("-L%s", FREETYPE_LIBRARY_PATH), "-lfreetype")
 
@@ -72,7 +74,8 @@ int main(int argc, char *argv[]) {
   builder_inputs_list(&cmd);
   builder_libs(&cmd);
   builder_flags(&cmd);
-  builder_freetype_include_path(&cmd);
+  builder_opengl(&cmd);
+  builder_freetype2(&cmd);
   builder_macos_frameworks(&cmd);
 
   if (!cmd_run_sync_and_reset(&cmd))
