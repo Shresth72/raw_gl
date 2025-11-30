@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
   builder_cc(&cmd);
   builder_output(&cmd, BINARY);
-  builder_inputs_list(&cmd, SRC_FILES);
+  builder_inputs_list(&cmd, SPLINE_FILES);
   builder_libs(&cmd);
   builder_flags(&cmd);
   builder_opengl(&cmd);

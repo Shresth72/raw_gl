@@ -40,6 +40,7 @@ typedef struct {
   size_t capacity;
 } Solutions;
 
+int dragging = -1;
 static Spline spline = {0};
 static bool grid[grid_height][grid_width] = {0};
 
@@ -70,47 +71,74 @@ int compare_solutions_by_tx(const void *a, const void *b) {
   return 0;
 }
 
-void solve_row(size_t row, Solutions *solutions) {
-  solutions->count = 0;
-  float y = (row + 0.5) * cell_height;
+void solve_y_cubic(float y, Vector2 p1, Vector2 p2, Vector2 p3,
+                   Solutions *solutions) {
+  float dx12 = p2.x - p1.x;
+  float dx23 = p3.x - p2.x;
+  float dy12 = p2.y - p1.y;
+  float dy23 = p3.y - p2.y;
 
-  for (size_t i = 0; i + 2 <= spline.count; i += 2) {
-    Vector2 p1 = spline.items[i];
-    Vector2 p2 = spline.items[i + 1];
-    Vector2 p3 = spline.items[(i + 2) % spline.count];
+  float a = dy23 - dy12;
+  float b = 2 * dy12;
+  float c = p1.y - y;
 
-    float dx12 = p2.x - p1.x;
-    float dx23 = p3.x - p2.x;
-    float dy12 = p2.y - p1.y;
-    float dy23 = p3.y - p2.y;
+  float t[2];
+  size_t tn = 0;
 
-    float a = dy23 - dy12;
-    float b = 2 * dy12;
-    float c = p1.y - y;
-
-    float t[2];
-    size_t tn = 0;
-
-    if (fabsf(a) > 1e-6) {
-      float D = b * b - 4 * a * c;
-      if (D >= 0.0) {
-        t[tn++] = (-b + sqrtf(D)) / (2 * a);
-        t[tn++] = (-b - sqrtf(D)) / (2 * a);
-      }
-    } else if (fabsf(b) > 1e-6) {
-      t[tn++] = -c / b;
+  if (fabsf(a) > 1e-6) {
+    float D = b * b - 4 * a * c;
+    if (D >= 0.0) {
+      t[tn++] = (-b + sqrtf(D)) / (2 * a);
+      t[tn++] = (-b - sqrtf(D)) / (2 * a);
     }
+  } else if (fabsf(b) > 1e-6) {
+    t[tn++] = -c / b;
+  }
 
-    for (size_t j = 0; j < tn; ++j) {
-      if (!(t[j] >= 0 && 1 >= t[j]))
-        continue;
+  for (size_t j = 0; j < tn; ++j) {
+    if (!(0 <= t[j] && t[j] <= 1))
+      continue;
+    float tx = (dx23 - dx12) * t[j] * t[j] + 2 * dx12 * t[j] + p1.x;
+    float d = (dy23 - dy12) * t[j] + dy12;
+    Solution s = {tx, d};
+    da_append(solutions, s);
+  }
+}
 
-      float tx = (dx23 - dx12) * t[j] * t[j] + 2 * dx12 * t[j] + p1.x;
-      float d = (dy23 - dy12) * t[j] + dy12;
+void solve_y_line(float y, Vector2 p1, Vector2 p2, Solutions *solutions) {
+  float dy = p2.y - p1.y;
+  if (fabsf(dy) > 1e-6) {
+    float t = (y - p1.y) / dy;
+    if (0 <= t && t <= 1) {
+      float dx = p2.x - p1.x;
+      float tx = dx * t + p1.x;
+      float d = dy;
       Solution s = {tx, d};
       da_append(solutions, s);
     }
   }
+}
+
+void solve_row(size_t row, Solutions *solutions) {
+  if (spline.count <= 2)
+    return;
+
+  solutions->count = 0;
+  float y = (row + 0.5) * cell_height;
+  size_t i = 0;
+  for (; i + 2 <= spline.count; i += 2) {
+    Vector2 p1 = spline.items[i];
+    Vector2 p2 = spline.items[i + 1];
+    Vector2 p3 = spline.items[(i + 2) % spline.count];
+    solve_y_cubic(y, p1, p2, p3, solutions);
+  }
+
+  if (spline.count % 2 == 1) {
+    Vector2 p1 = spline.items[spline.count - 1];
+    Vector2 p2 = spline.items[0];
+    solve_y_line(y, p1, p2, solutions);
+  }
+
   qsort(solutions->items, solutions->count, sizeof(*solutions->items),
         compare_solutions_by_tx);
 }
@@ -122,7 +150,6 @@ void render_spline_into_grid(void) {
       grid[row][col] = false;
     }
   }
-
   for (size_t row = 0; row < grid_height; ++row) {
     int winding = 0;
     solve_row(row, &solutions);
@@ -143,6 +170,40 @@ void render_spline_into_grid(void) {
       } else if (s.d > 0) {
         winding -= 1;
       }
+    }
+  }
+}
+
+void edit_control_points(void) {
+  Vector2 mouse = GetMousePosition();
+
+  for (size_t i = 0; i < spline.count; ++i) {
+    Vector2 size = {20, 20};
+    Vector2 position = spline.items[i];
+    position = Vector2Subtract(position, Vector2Scale(size, 0.5));
+
+    bool hover = CheckCollisionPointRec(
+        mouse, (Rectangle){position.x, position.y, size.x, size.y});
+
+    if (hover) {
+      if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+        dragging = i;
+    } else {
+      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON))
+        dragging = -1;
+    }
+    DrawRectangleV(position, size, hover ? RED : BLUE);
+  }
+
+  if (dragging >= 0) {
+    if (spline.items[dragging].x != mouse.x ||
+        spline.items[dragging].y != mouse.y) {
+      render_spline_into_grid();
+    }
+    spline.items[dragging] = mouse;
+  } else {
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+      da_append(&spline, mouse);
     }
   }
 }

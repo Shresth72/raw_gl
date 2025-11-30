@@ -42,7 +42,7 @@ int main() {
       max_y = p.y;
   }
 
-  size_t factor = 100;
+  size_t factor = 80;
   float scale = 0.5f;
   int pindex = 0;
 
@@ -64,6 +64,12 @@ int main() {
     BeginDrawing();
     ClearBackground(GetColor(0x181818));
     display_grid();
+
+    // if (IsKeyPressed(KEY_C)) {
+    //   spline.count = 0;
+    //   memset(grid, 0, sizeof(grid));
+    // }
+    // edit_control_points();
     EndDrawing();
   }
   CloseWindow();
