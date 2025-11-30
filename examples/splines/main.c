@@ -1,6 +1,6 @@
 #include "raster.c"
 
-int main() {
+int render_font(Spline *spline) {
   FT_Library library = {0};
 
   FT_Error error = FT_Init_FreeType(&library);
@@ -42,7 +42,6 @@ int main() {
       max_y = p.y;
   }
 
-  size_t factor = 80;
   float scale = 0.5f;
   int pindex = 0;
 
@@ -52,12 +51,26 @@ int main() {
       float x = (p.x - min_x) * scale + 100;
       float y = (max_y - p.y) * scale + 100;
       Vector2 pos = {x, y};
-      da_append(&spline, pos);
+      da_append(spline, pos);
     }
   }
 
-  render_spline_into_grid();
+  return 0;
+}
 
+int main() {
+
+  // Spline spline_ = {0};
+  // int error = render_font(&spline_);
+  // if (error != 0)
+  //   return 1;
+  // render_spline_into_grid(&spline_);
+
+  int dragging = -1;
+  Spline spline = {0};
+  render_spline_into_grid(&spline);
+
+  size_t factor = 80;
   InitWindow(16 * factor, 9 * factor, "font");
   SetTargetFPS(60);
   while (!WindowShouldClose()) {
@@ -65,11 +78,11 @@ int main() {
     ClearBackground(GetColor(0x181818));
     display_grid();
 
-    // if (IsKeyPressed(KEY_C)) {
-    //   spline.count = 0;
-    //   memset(grid, 0, sizeof(grid));
-    // }
-    // edit_control_points();
+    if (IsKeyPressed(KEY_C)) {
+      spline.count = 0;
+      memset(grid, 0, sizeof(grid));
+    }
+    edit_control_points(&spline, &dragging);
     EndDrawing();
   }
   CloseWindow();
