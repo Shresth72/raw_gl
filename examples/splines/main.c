@@ -21,7 +21,7 @@ int render_font(Spline *spline) {
     return 1;
   }
 
-  error = FT_Load_Char(face, 'E', FT_LOAD_DEFAULT);
+  error = FT_Load_Char(face, 'x', FT_LOAD_DEFAULT);
   if (error) {
     fprintf(stderr, "ERROR: Could not load char glyph\n");
     return 1;
@@ -45,15 +45,15 @@ int render_font(Spline *spline) {
   float scale = 0.5f;
   int pindex = 0;
 
-  for (int i = 0; i < face->glyph->outline.n_contours; ++i) {
-    for (; pindex <= face->glyph->outline.contours[i]; ++pindex) {
-      FT_Vector p = face->glyph->outline.points[pindex];
-      float x = (p.x - min_x) * scale + 100;
-      float y = (max_y - p.y) * scale + 100;
-      Vector2 pos = {x, y};
-      da_append(spline, pos);
-    }
-  }
+  // for (int i = 0; i < face->glyph->outline.n_contours; ++i) {
+  //   for (; pindex <= face->glyph->outline.contours[i]; ++pindex) {
+  //     FT_Vector p = face->glyph->outline.points[pindex];
+  //     float x = (p.x - min_x) * scale + 100;
+  //     float y = (max_y - p.y) * scale + 100;
+  //     Vector2 pos = {x, y};
+  //     da_append(spline, pos);
+  //   }
+  // }
 
   return 0;
 }
@@ -66,7 +66,9 @@ int main() {
   //   return 1;
   // render_spline_into_grid(&spline_);
 
-  int dragging = -1;
+  Control_Points control_points = {
+      .dragging = -1,
+  };
   Spline spline = {0};
   render_spline_into_grid(&spline);
 
@@ -79,10 +81,10 @@ int main() {
     display_grid();
 
     if (IsKeyPressed(KEY_C)) {
-      spline.count = 0;
+      control_points.count = 0;
       memset(grid, 0, sizeof(grid));
     }
-    edit_control_points(&spline, &dragging);
+    edit_control_points(&control_points, &spline);
     EndDrawing();
   }
   CloseWindow();
