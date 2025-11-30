@@ -6,16 +6,29 @@
 #define NOB_STRIP_PREFIX
 #include "src/libs/nob.h"
 
-/* ---------- */
+const char *SRC_FILES[] = {"src/main.c"};
+#define builder_inputs_list(cmd)                                               \
+  do {                                                                         \
+    for (int i = 0; SRC_FILES[i] != NULL; i++) {                               \
+      cmd_append(cmd, SRC_FILES[i]);                                           \
+    }                                                                          \
+  } while (0)
+
+/* ----- PLATFORM VARS ----- */
 #ifdef __linux__
 #define RAYLIB_PATH "./lib/raylib/raylib-5.5_linux_amd64"
 #define RAYLIB_LINKER "-l:libraylib.a"
+#define FREETYPE_INCLUDE_PATH "/usr/include/freetype2"
+#define FREETYPE_LIBRARY_PATH "/usr/lib/x86_64-linux-gnu"
 #elif defined(_WIN32) || defined(_WIN64)
 #define RAYLIB_PATH "./lib/raylib/raylib-5.5_windows"
 #define RAYLIB_LINKER "./lib/raylib/raylib-5.5_windows/lib/libraylib.a"
+#error "Unsupported platform"
 #elif defined(__APPLE__)
 #define RAYLIB_PATH "./lib/raylib/raylib-5.5_macos"
 #define RAYLIB_LINKER "./lib/raylib/raylib-5.5_macos/lib/libraylib.a"
+#define FREETYPE_INCLUDE_PATH "/opt/homebrew/include/freetype2"
+#define FREETYPE_LIBRARY_PATH "/opt/homebrew/lib"
 #else
 #error "Unsupported platform"
 #endif
@@ -38,47 +51,16 @@
 #define builder_include_path(cmd, include_path)                                \
   cmd_append(cmd, temp_sprintf("-I%s", include_path))
 
-static int is_c_source(const char *name) {
-  size_t n = strlen(name);
-  if (n < 2)
-    return 0;
-  char a = name[n - 2], b = name[n - 1];
-  return (a == '.' && (b == 'c' || b == 'C'));
-}
+/* ----- RAYLIB ----- */
+#define builder_raylib_include_path(cmd)                                       \
+  cmd_append(cmd, temp_sprintf("-I%s/include/", RAYLIB_PATH))
+#define builder_raylib_library_path(cmd)                                       \
+  cmd_append(cmd, temp_sprintf("-L%s/lib/", RAYLIB_PATH), RAYLIB_LINKER)
 
-static void collect_c_files(Nob_Cmd *cmd, const char *dirpath) {
-  DIR *dir = opendir(dirpath);
-  if (!dir)
-    return;
-
-  struct dirent *entry;
-  while ((entry = readdir(dir)) != NULL) {
-    const char *name = entry->d_name;
-    if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
-      continue;
-
-    char full[PATH_MAX];
-    int wrote = snprintf(full, sizeof(full), "%s/%s", dirpath, name);
-    if (wrote < 0 || (size_t)wrote >= sizeof(full)) {
-      continue;
-    }
-
-    struct stat st;
-    if (stat(full, &st) != 0)
-      continue;
-
-    if (S_ISDIR(st.st_mode)) {
-      collect_c_files(cmd, full);
-    } else {
-      if (is_c_source(name)) {
-        builder_inputs(cmd, full);
-      }
-    }
-  }
-
-  closedir(dir);
-}
-#define builder_collect_sources(cmd, root) collect_c_files_recursive(cmd, root)
+/* ----- FREETYPE2 ----- */
+#define builder_freetype_include_path(cmd)                                     \
+  cmd_append(cmd, temp_sprintf("-I%s", FREETYPE_INCLUDE_PATH),                 \
+             temp_sprintf("-L%s", FREETYPE_LIBRARY_PATH), "-lfreetype")
 
 int main(int argc, char *argv[]) {
   NOB_GO_REBUILD_URSELF(argc, argv);
@@ -87,9 +69,10 @@ int main(int argc, char *argv[]) {
 
   builder_cc(&cmd);
   builder_output(&cmd, "build/main");
-  builder_inputs(&cmd, "src/main.c");
+  builder_inputs_list(&cmd);
   builder_libs(&cmd);
   builder_flags(&cmd);
+  builder_freetype_include_path(&cmd);
   builder_macos_frameworks(&cmd);
 
   if (!cmd_run_sync_and_reset(&cmd))
