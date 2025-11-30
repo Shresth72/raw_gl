@@ -4,15 +4,7 @@
 
 #define NOB_IMPLEMENTATION
 #define NOB_STRIP_PREFIX
-#include "src/libs/nob.h"
-
-const char *SRC_FILES[] = {"src/main.c"};
-#define builder_inputs_list(cmd)                                               \
-  do {                                                                         \
-    for (int i = 0; SRC_FILES[i] != NULL; i++) {                               \
-      cmd_append(cmd, SRC_FILES[i]);                                           \
-    }                                                                          \
-  } while (0)
+#include "libs/nob.h"
 
 /* ----- PLATFORM VARS ----- */
 #ifdef __linux__
@@ -64,14 +56,27 @@ const char *SRC_FILES[] = {"src/main.c"};
   cmd_append(cmd, temp_sprintf("-I%s", FREETYPE_INCLUDE_PATH),                 \
              temp_sprintf("-L%s", FREETYPE_LIBRARY_PATH), "-lfreetype")
 
+/* ----- BUILD FILES ----- */
+#define builder_inputs_list(cmd, files)                                        \
+  do {                                                                         \
+    for (int i = 0; files[i] != NULL; i++) {                                   \
+      cmd_append(cmd, files[i]);                                               \
+    }                                                                          \
+  } while (0)
+
 int main(int argc, char *argv[]) {
   NOB_GO_REBUILD_URSELF(argc, argv);
+
+  const char *BINARY = "build/main";
+  const char *SRC_FILES[] = {"src/main.c", NULL};
+
+  const char *SPLINE_FILES[] = {"", NULL};
 
   Nob_Cmd cmd = {0};
 
   builder_cc(&cmd);
-  builder_output(&cmd, "build/main");
-  builder_inputs_list(&cmd);
+  builder_output(&cmd, BINARY);
+  builder_inputs_list(&cmd, SRC_FILES);
   builder_libs(&cmd);
   builder_flags(&cmd);
   builder_opengl(&cmd);
@@ -87,7 +92,7 @@ int main(int argc, char *argv[]) {
     const char *subcommand = shift(argv, argc);
 
     if (strcmp(subcommand, "run") == 0) {
-      cmd_append(&cmd, "./build/main");
+      cmd_append(&cmd, BINARY);
       if (!cmd_run_sync_and_reset(&cmd))
         return 1;
     } else {

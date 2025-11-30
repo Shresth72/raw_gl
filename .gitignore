@@ -55,7 +55,5 @@ dkms.conf
 *.dwo
 
 # Build
-build/build
-build/build.old
-build/main
+build/
 
