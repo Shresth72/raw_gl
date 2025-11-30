@@ -68,9 +68,15 @@ int main(int argc, char *argv[]) {
   NOB_GO_REBUILD_URSELF(argc, argv);
 
   const char *BINARY = "build/main";
-  const char *SRC_FILES[] = {"src/main.c", NULL};
+  const char *SRC_FILES[] = {
+      "src/main.c",
+      NULL,
+  };
 
-  const char *SPLINE_FILES[] = {"", NULL};
+  const char *SPLINE_FILES[] = {
+      "examples/splines/main.c",
+      NULL,
+  };
 
   Nob_Cmd cmd = {0};
 
@@ -80,6 +86,7 @@ int main(int argc, char *argv[]) {
   builder_libs(&cmd);
   builder_flags(&cmd);
   builder_opengl(&cmd);
+  builder_raylib(&cmd);
   builder_freetype2(&cmd);
   builder_macos_frameworks(&cmd);
 
