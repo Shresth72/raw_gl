@@ -1,5 +1,16 @@
 #include "raster.c"
 
+typedef struct {
+  Vector2 position;
+  bool on;
+} Point;
+
+typedef struct {
+  Point *items;
+  size_t count;
+  size_t capacity;
+} Points;
+
 int render_font(Spline *spline) {
   FT_Library library = {0};
 
@@ -44,21 +55,39 @@ int render_font(Spline *spline) {
 
   float scale = 0.5f;
   int pindex = 0;
+  Points points = {0};
 
-  // for (int i = 0; i < face->glyph->outline.n_contours; ++i) {
-  //   for (; pindex <= face->glyph->outline.contours[i]; ++pindex) {
-  //     FT_Vector p = face->glyph->outline.points[pindex];
-  //     float x = (p.x - min_x) * scale + 100;
-  //     float y = (max_y - p.y) * scale + 100;
-  //     Vector2 pos = {x, y};
-  //     da_append(spline, pos);
-  //   }
-  // }
+  for (int i = 0; i < face->glyph->outline.n_contours; ++i) {
+    for (; pindex <= face->glyph->outline.contours[i]; ++pindex) {
+      FT_Vector p = face->glyph->outline.points[pindex];
+      unsigned char t = FT_CURVE_TAG(face->glyph->outline.tags[pindex]);
+      assert(t != FT_CURVE_TAG_CUBIC);
+
+      float x = (p.x - min_x) * scale + 100;
+      float y = (max_y - p.y) * scale + 100;
+      Point point = {
+          .position = {x, y},
+          .on = t == FT_CURVE_TAG_ON,
+      };
+      da_append(&points, point);
+    }
+  }
+
+  pindex = 0;
+  for (int i = 0; i < face->glyph->outline.n_contours; ++i) {
+    for (; pindex <= face->glyph->outline.contours[i]; pindex++) {
+    }
+  }
 
   return 0;
 }
 
 int main() {
+
+  Control_Points control_points = {
+      .dragging = -1,
+  };
+  Spline spline = {0};
 
   // Spline spline_ = {0};
   // int error = render_font(&spline_);
@@ -66,10 +95,6 @@ int main() {
   //   return 1;
   // render_spline_into_grid(&spline_);
 
-  Control_Points control_points = {
-      .dragging = -1,
-  };
-  Spline spline = {0};
   render_spline_into_grid(&spline);
 
   size_t factor = 80;
