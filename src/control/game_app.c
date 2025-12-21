@@ -1,5 +1,4 @@
 #include "game_app.h"
-#include <GLFW/glfw3.h>
 
 GameApp *game_app_create(GameAppCreateInfo *createInfo) {
   GameApp *app = (GameApp *)malloc(sizeof(GameApp));
@@ -63,6 +62,38 @@ void game_app_destroy(GameApp *app) {
   free(app);
 }
 
+GLFWwindow *make_window(int width, int height) {
+  GLCall(glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3));
+  GLCall(glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3));
+  GLCall(glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE));
+
+  GLCall(glfwWindowHint(GLFW_DECORATED, GLFW_FALSE));
+
+  GLCall(GLFWwindow *window =
+             glfwCreateWindow(width, height, "GAME WINDOW", NULL, NULL));
+  if (!window) {
+    GLCall(glfwTerminate());
+    return NULL;
+  }
+
+  GLCall(glfwMakeContextCurrent(window));
+  if (glewInit() != GLEW_OK) {
+    fprintf(stderr, "Failed to initialize GLEW\n");
+    return NULL;
+  }
+
+  return window;
+}
+
+void key_callback(GLFWwindow *window, int key, int scancode, int action,
+                  int mods) {
+  GameApp *app = (GameApp *)glfwGetWindowUserPointer(window);
+
+  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+    glfwSetWindowShouldClose(window, GLFW_TRUE);
+  }
+}
+
 void calculate_frame_rate(GameApp *app) {
   GLCall(app->appInfo->currentTime = glfwGetTime());
   app->appInfo->numFrames++;
@@ -91,8 +122,4 @@ void mouse_button_callback(GLFWwindow *window, int button, int action,
   }
 
   // NOTE: If needed handle right button
-}
-
-void key_callback(GLFWwindow *window, int button, int action, int mods) {
-  GLCall(GameApp *app = (GameApp *)glfwGetWindowUserPointer(window));
 }

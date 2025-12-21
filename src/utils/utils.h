@@ -1,4 +1,10 @@
 #pragma once
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#include <freetype2/ft2build.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define ASSERT(x)                                                              \
   if (!(x))                                                                    \
